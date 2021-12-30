@@ -60,6 +60,7 @@ struct Node {
         std::set<int> output;
         
         for(auto &num: data) {
+            std::cout<<num<<endl;
             output.insert(num);
             if(output.size() == numElements) {
                 std::vector<int> opVec(output.begin(), output.end());
@@ -311,7 +312,7 @@ struct GeneralizedSuffixTree {
             Node* currentNode = s;
             std::string str = inputstr;
             Edge* g = s->getEdge(str[0]);
-            while(g!=nullptr && (std::mismatch(g->getLabel().begin(), g->getLabel().end(), str.begin(), str.end()).first == g->getLabel().end())) {
+            while(g!=nullptr && ( (std::mismatch(g->getLabel().begin(), g->getLabel().end(), str.begin(), str.end()).first == g->getLabel().end()) || str == g->getLabel())) {
                 str = str.substr(g->getLabel().length());
                 currentNode = g->getDest();
                 if(str.length() > 0) {
@@ -340,7 +341,7 @@ struct GeneralizedSuffixTree {
             else {
                 std::string newLabel = label.substr(str.length());
                 // label.startsWith(str);
-                if(!(std::mismatch(str.begin(), str.end(), label.begin(), label.end()).first == str.end())) {
+                if(!(std::mismatch(str.begin(), str.end(), label.begin(), label.end()).first == str.end()) && !(str == label)) {
                     return {};
                 }
 
@@ -364,10 +365,10 @@ struct GeneralizedSuffixTree {
                     e->getDest()->addRef(value);
                     return {true,s};
                 }
-                else if((std::mismatch(label.begin(), label.end(), remainder.begin(), remainder.end()).first == label.end())) {
+                else if(((std::mismatch(label.begin(), label.end(), remainder.begin(), remainder.end()).first == label.end()) || remainder == label)) {
                     return {true, s};
                 }
-                else if((std::mismatch(remainder.begin(), remainder.end(), label.begin(), label.end()).first == remainder.end())) {
+                else if(((std::mismatch(remainder.begin(), remainder.end(), label.begin(), label.end()).first == remainder.end()) || remainder == label )) {
                     Node* newNode = new Node();
                     newNode->addRef(value);
 
@@ -391,14 +392,16 @@ struct GeneralizedSuffixTree {
 int main() {
     using namespace std;
     GeneralizedSuffixTree *in = new GeneralizedSuffixTree();
-    std::string word = "cacao";
+    std::string word = "qabcz";
     int index = 0;
     in->put(word, index);
-    std::string word2 = "cancel";
+    std::string word2 = "cdabc";
     in->put(word2,1);
-    std::string word3 = "francel";
-    in->put(word3, 2);
-    vector<int> op = in->search("cel");
+    in->put("tabchij", 2);
+    std::string word3 = "fraabc";
+    in->put(word3, 3);
+
+    vector<int> op = in->search("abc");
     for(auto &i: op) {
         cout<<i<<endl;
     }
