@@ -6,22 +6,21 @@ typedef struct Edge Edge;
 typedef struct Node Node;
 typedef struct GeneralizedSuffixTree GeneralizedSuffixTree;
 
+bool startsWith(std::string &prefix, std::string & arg) {
+    return ((prefix.size() <= arg.size()) && (std::equal(prefix.begin(), prefix.end(), arg.begin())));
+}
+
 struct Edge {
     std::string label;
-    struct Node* dest;
-
-
-    ~Edge(){
-        delete dest;
-    }
+    struct std::shared_ptr<Node> dest;
 
     std::string getLabel() {return label;}
 
-    struct Node* getDest() {
+    struct std::shared_ptr<Node> getDest() {
         return dest;
     }
 
-    Edge(std::string label, Node* dest):label(label), dest(dest) {
+    Edge(std::string label, std::shared_ptr<Node> dest):label(label), dest(dest) {
 
     }
 };
@@ -29,25 +28,18 @@ struct Edge {
 struct Node {
 
     std::set<int> data;
+    std::set<int> suffixData;
     int lastIdx = 0;
     const static int START_SIZE = 0;
     const static int INCREMENT = 1;
-    std::unordered_map<char, Edge*> edges;
-    Node* suffix;
+    std::unordered_map<char, std::shared_ptr<Edge>> edges;
+    std::shared_ptr<Node> suffix;
     int resultCount = -1;
 
     Node(){
         edges = {};
         suffix = nullptr;
         data = {};
-    }
-
-
-    ~Node() {
-        delete suffix;
-        for(auto & itr: edges) {
-            delete itr.second;
-        }
     }
 
     bool contains(int index) {
@@ -60,7 +52,6 @@ struct Node {
         std::set<int> output;
         
         for(auto &num: data) {
-            std::cout<<num<<endl;
             output.insert(num);
             if(output.size() == numElements) {
                 std::vector<int> opVec(output.begin(), output.end());
@@ -96,7 +87,7 @@ struct Node {
         data.insert(index);
         lastIdx = index;
 
-        Node *iter = suffix;
+        std::shared_ptr<Node> iter = suffix;
         while(iter != nullptr) {
             if(iter->contains(index))
                 break;
@@ -104,6 +95,14 @@ struct Node {
             iter = iter->suffix;
         }
 
+    }
+
+    void addSuffix(int index) {
+        if(suffixData.find(index) != suffixData.end()) {
+            return;
+        }
+
+        suffixData.insert(index);
     }
 
     std::set<int> computeAndCacheCountRecursive() {
@@ -123,11 +122,11 @@ struct Node {
         return resultCount;
     }
 
-    void addEdge(char ch, Edge* e) {
+    void addEdge(char ch, std::shared_ptr<Edge> e) {
         edges[ch] = e;
     }
 
-    Edge* getEdge(char ch) {
+    std::shared_ptr<Edge> getEdge(char ch) {
         return edges[ch];
     }
 
@@ -140,30 +139,29 @@ struct Node {
 
 struct GeneralizedSuffixTree {
     int last = 0;
-    Node* root = new Node();
-    Node* activeLeaf = root;
-
-    ~GeneralizedSuffixTree() {
-        delete root;
-        delete activeLeaf;
-    }
+    std::shared_ptr<Node> root = std::make_shared<Node>();
+    std::shared_ptr<Node> activeLeaf = root;
 
     std::vector<int> search(std::string word) {
         return search(word, -1);
     }
 
     std::vector<int> search(std::string word, int results) {
-        Node *tmpNode = searchNode(word);
+        std::shared_ptr<Node> tmpNode = searchNode(word);
         
         if(tmpNode == nullptr) {
             return {};
         }
 
+        for(auto &i: tmpNode->suffixData) {
+            std::cout<<"suffixDatais"<<std::endl;
+            std::cout<<i<<std::endl;
+        }
         return tmpNode->getData(results);
     }
 
     std::pair<std::vector<int>,int> searchWithCount(std::string word, int to) {
-        Node* tmpNode = searchNode(word);
+        std::shared_ptr<Node> tmpNode = searchNode(word);
         if(tmpNode == nullptr) {
             return {{},0};
         }
@@ -172,9 +170,9 @@ struct GeneralizedSuffixTree {
     }
 
 
-    Node* searchNode(std::string word) {
-        Node* currentNode = root;
-        Edge* currentEdge = nullptr;
+    std::shared_ptr<Node> searchNode(std::string word) {
+        std::shared_ptr<Node> currentNode = root;
+        std::shared_ptr<Edge> currentEdge = nullptr;
 
         for(int i=0; i<word.length(); i++) {
             char ch = word[i];
@@ -207,12 +205,12 @@ struct GeneralizedSuffixTree {
 
         activeLeaf = root;
         std::string remainder = key;
-        Node* s = root;
+        std::shared_ptr<Node> s = root;
 
         std::string text = "";
         for(int i=0; i<remainder.length() ; i++) {
             text.push_back(remainder[i]);
-            std::pair<Node*, std::string> active = update(s, text, remainder.substr(i), index);
+            std::pair<std::shared_ptr<Node>, std::string> active = update(s, text, remainder.substr(i), index);
             active = canonize(active.first, active.second);
             s = active.first;
             text = active.second;
@@ -223,28 +221,29 @@ struct GeneralizedSuffixTree {
         }
     }
 
-    std::pair<Node*, std::string> update(Node* inputNode, std::string stringPart, std::string rest, int value) {
-        Node* s = inputNode;
+    std::pair<std::shared_ptr<Node>, std::string> update(std::shared_ptr<Node> inputNode, std::string stringPart, std::string rest, int value) {
+        std::shared_ptr<Node> s = inputNode;
         std::string tempstr = stringPart;
         char newChar = stringPart[stringPart.length()-1];
 
-        Node* oldRoot = root;
-        std::pair<bool, Node*> ret = testAndSplit(s, tempstr.substr(0, tempstr.length()-1), newChar, rest, value);
+        std::shared_ptr<Node> oldRoot = root;
+        std::pair<bool, std::shared_ptr<Node>> ret = testAndSplit(s, tempstr.substr(0, tempstr.length()-1), newChar, rest, value);
 
-        Node* r = ret.second;
+        std::shared_ptr<Node> r = ret.second;
         bool endpoint = ret.first;
 
-        Node* leaf;
+        std::shared_ptr<Node> leaf;
 
         while(!endpoint) {
-            Edge* tempEdge = r->getEdge(newChar);
+            std::shared_ptr<Edge> tempEdge = r->getEdge(newChar);
             if(tempEdge!=nullptr) {
             leaf = tempEdge->getDest();
             }
             else {
-                leaf = new Node();
+                leaf = std::make_shared<Node>();
                 leaf->addRef(value);
-                Edge* newEdge = new Edge(rest, leaf);
+                leaf->addSuffix(value);
+                std::shared_ptr<Edge> newEdge = std::make_shared<Edge>(rest,leaf);
                 r->addEdge(newChar, newEdge);
             }
 
@@ -267,7 +266,7 @@ struct GeneralizedSuffixTree {
                 tempstr = tempstr.substr(1);
             }
             else {
-                std::pair<Node*, std::string> canret = canonize(s->suffix, safeCutLastChar(tempstr));
+                std::pair<std::shared_ptr<Node>, std::string> canret = canonize(s->suffix, safeCutLastChar(tempstr));
                 s = canret.first;
                 tempstr = canret.second + tempstr[tempstr.length()-1];
             }
@@ -287,7 +286,7 @@ struct GeneralizedSuffixTree {
         return {s, tempstr};
     }
 
-    Node* getRoot() {
+    std::shared_ptr<Node> getRoot() {
         return root;
     }
 
@@ -303,16 +302,16 @@ struct GeneralizedSuffixTree {
     }
 
 
-    std::pair<Node*, std::string> canonize(Node* s, std::string inputstr) {
+    std::pair<std::shared_ptr<Node>, std::string> canonize(std::shared_ptr<Node> s, std::string inputstr) {
         if(inputstr=="") {
             return {s,inputstr};
         }
 
         else {
-            Node* currentNode = s;
+            std::shared_ptr<Node> currentNode = s;
             std::string str = inputstr;
-            Edge* g = s->getEdge(str[0]);
-            while(g!=nullptr && ( (std::mismatch(g->getLabel().begin(), g->getLabel().end(), str.begin(), str.end()).first == g->getLabel().end()) || str == g->getLabel())) {
+            std::shared_ptr<Edge> g = s->getEdge(str[0]);
+            while(g!=nullptr && ((g->label.size() <= str.size()) && (std::equal(g->label.begin(), g->label.end(), str.begin())))) {
                 str = str.substr(g->getLabel().length());
                 currentNode = g->getDest();
                 if(str.length() > 0) {
@@ -325,14 +324,14 @@ struct GeneralizedSuffixTree {
         return {};
     }
 
-    std::pair<bool, Node*> testAndSplit(Node *inputs, std::string stringPart, char t, std::string remainder, int value) {
+    std::pair<bool, std::shared_ptr<Node>> testAndSplit(std::shared_ptr<Node> inputs, std::string stringPart, char t, std::string remainder, int value) {
 
-        std::pair<Node*, std::string> ret = canonize(inputs, stringPart);
-        Node* s = ret.first;
+        std::pair<std::shared_ptr<Node>, std::string> ret = canonize(inputs, stringPart);
+        std::shared_ptr<Node> s = ret.first;
         std::string str = ret.second;
 
         if(str!="") {
-            Edge* g = s->getEdge(str[0]);
+            std::shared_ptr<Edge> g = s->getEdge(str[0]);
             std::string label = g->getLabel();
 
             if(label.length() > str.length() && label[str.length()] == t) {
@@ -341,12 +340,13 @@ struct GeneralizedSuffixTree {
             else {
                 std::string newLabel = label.substr(str.length());
                 // label.startsWith(str);
-                if(!(std::mismatch(str.begin(), str.end(), label.begin(), label.end()).first == str.end()) && !(str == label)) {
+                
+                if(!(startsWith(str,label))) {
                     return {};
                 }
 
-                Node* r = new Node();
-                Edge* newEdge = new Edge(str,r);
+                std::shared_ptr<Node> r = std::make_shared<Node>();
+                std::shared_ptr<Edge> newEdge = std::make_shared<Edge>(str, r);
                 g->label = newLabel;
                 r->addEdge(newLabel[0], g);
                 s->addEdge(str[0], newEdge);
@@ -355,7 +355,7 @@ struct GeneralizedSuffixTree {
             }
         }
         else {
-            Edge *e = s->getEdge(t);
+            std::shared_ptr<Edge> e = s->getEdge(t);
             if(e == nullptr) {
                 return {false, s};
             }
@@ -363,16 +363,19 @@ struct GeneralizedSuffixTree {
                 std::string label = e->getLabel();
                 if(remainder == e->getLabel()) {
                     e->getDest()->addRef(value);
+                    e->getDest()->addSuffix(value);
                     return {true,s};
                 }
-                else if(((std::mismatch(label.begin(), label.end(), remainder.begin(), remainder.end()).first == label.end()) || remainder == label)) {
+                
+                else if(startsWith(label,remainder)) {
                     return {true, s};
                 }
-                else if(((std::mismatch(remainder.begin(), remainder.end(), label.begin(), label.end()).first == remainder.end()) || remainder == label )) {
-                    Node* newNode = new Node();
+                else if(startsWith(remainder,label)) {
+                    std::shared_ptr<Node>  newNode = std::make_shared<Node>();
                     newNode->addRef(value);
+                    newNode->addSuffix(value);
 
-                    Edge* newEdge = new Edge(remainder, newNode);
+                    std::shared_ptr<Edge> newEdge = std::make_shared<Edge>(remainder, newNode);
                     e->label = e->getLabel().substr(remainder.length());
                     newNode->addEdge(e->getLabel()[0], e);
                     s->addEdge(t, newEdge);
@@ -387,11 +390,22 @@ struct GeneralizedSuffixTree {
     }
 };
 
+void preProcessText(std::string &s) {
+    s.erase(remove_if(s.begin(),s.end(), [&](char c) -> bool {
+        return (c == '-' || !isalpha(c));
+    }), s.end());
 
+    transform(s.begin(), s.end(), s.begin(), [&](unsigned char c) -> char{
+        return tolower(c);
+    });
+
+    return;
+}
 
 int main() {
     using namespace std;
-    GeneralizedSuffixTree *in = new GeneralizedSuffixTree();
+    std::unique_ptr<GeneralizedSuffixTree> in = make_unique<GeneralizedSuffixTree>();
+    // GeneralizedSuffixTree *in = new GeneralizedSuffixTree();
     std::string word = "qabcz";
     int index = 0;
     in->put(word, index);
@@ -400,11 +414,39 @@ int main() {
     in->put("tabchij", 2);
     std::string word3 = "fraabc";
     in->put(word3, 3);
+    std::string word4 = "abc";
+    in->put(word4, 4);
+
+    // map<int,std::string> stringMap;
+    // fstream f("../input.txt");
+    // std::string s;
+    // auto start = chrono::high_resolution_clock::now();
+    // int idx = 0;
+    // while(getline(f,s)) {
+    //     preProcessText(s);
+    //     stringMap[idx] = s;
+    //     in->put(s,idx);
+    //     idx++;
+    // }
+    // auto stop = chrono::high_resolution_clock::now();
+    // auto duration = chrono::duration_cast<chrono::microseconds>(stop-start);
+    // cout<<"duration "<<duration.count()<<endl;
+
+    // vector<int> op = in->search("mon");
+    // set<std::string> opSet;
+    // for(auto &i: op) {
+    //     opSet.insert(stringMap[i]);
+    // }
+
+    // for(auto &s : opSet) {
+    //     cout<<s<<endl;
+    // }
+
+    // cout<<opSet.size()<<endl;
 
     vector<int> op = in->search("abc");
-    for(auto &i: op) {
-        cout<<i<<endl;
-    }
-    // Hello* h = new Hello();
-    // std::cout<<h->n;
+    // for(auto &i: op) {
+    //     cout<<i<<endl;
+    // }
+
 }
