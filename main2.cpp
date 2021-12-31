@@ -121,7 +121,7 @@ int main() {
     // s = "frat";
     // generateAndInsert(s);
 
-    fstream f("./input.txt");
+    fstream f("./inputshit.txt");
     string s;
 
     auto start = chrono::high_resolution_clock::now();

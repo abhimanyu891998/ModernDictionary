@@ -95,9 +95,7 @@ void dfs(node *n, vector<string> &wordList) {
     }
 
     return;
-
-
-    
+  
 }
 
 
