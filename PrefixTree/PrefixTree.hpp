@@ -2,98 +2,128 @@
 #define GPT_MAIN
 #pragma once
 
-#include<bits/stdc++.h>
+#include<memory>
+#include<string>
+#include<algorithm>
+#include<unordered_map>
+#include<set>
+#include<vector>
+#include "./Node.hpp"
 
-class PrefixTree {
+namespace prefixtree {
 
-public: 
+    class Trie {
 
-struct node {
-    bool isSuffix;
-    unordered_map<char, node*> child;
-    set<string> words;
-}*head;
+        private:
+            std::shared_ptr<prefixtree::Node> head;
 
-void PrefixTree() {
-    head = new node();
-    head->isSuffix = false;
-    head->words = {};
+            void dfs(std::shared_ptr<prefixtree::Node> n, std::vector<std::string> &wordList) {
+
+                if(n->isWord) {
+                    wordList.push_back(n->word);
+                }
+
+                if(n->children.empty()) {
+                    return;
+                }
+
+                for( auto &[character, node]: n->children) {
+                    dfs(node, wordList);
+                }
+
+            }
+
+        public:
+            Trie():head(std::make_shared<prefixtree::Node>()) {
+
+            }
+
+            void insert(const std::string & word) {
+
+                std::shared_ptr<prefixtree::Node> current = head;
+                current->prefixCount++;
+
+
+                for(size_t i=0; i<word.length() ; ++i)  {
+
+                    char letter = word[i]; 
+
+                    if(current->children[letter] == nullptr) {
+                        current->children[letter] = std::make_shared<prefixtree::Node>();
+                    }
+                    
+                    current->children[letter]->prefixCount++;
+                    current = current->children[letter];
+                }
+
+
+                current->isWord = true;
+                current->word = word;
+
+            }
+
+            unsigned int prefixWordCount(const std::string &prefix) {
+
+                std::shared_ptr<prefixtree::Node> current = head;
+
+                for(size_t i=0; i< prefix.length() ; ++i) {
+                    char letter = prefix[i];
+                    if(current->children[letter] == nullptr) {
+                        return 0;
+                    }
+                    else {
+                        current = current->children[letter];
+                    }
+                }
+
+                return current->prefixCount;
+            }
+
+            std::vector<std::string> prefixWordList(const std::string &prefix) {
+
+                std::shared_ptr<prefixtree::Node> current = head;
+
+                for(size_t i=0; i<prefix.length() ; i++) {
+                    char letter = prefix[i];
+                    if(current->children[letter] == nullptr)
+                        return {};
+
+                    else
+                        current = current->children[letter];
+                }
+
+                std::vector<std::string> wordList;
+
+                dfs(current, wordList);
+
+                return wordList;
+            }
+
+            bool wordExists(const std::string &word) {
+                
+                std::shared_ptr<prefixtree::Node> current = head;
+
+                for(size_t i=0 ; i<word.length() ; i++) {
+                    char letter = word[i];
+                    if(current->children[letter] == nullptr) {
+                        return false;
+                    }
+
+                    current = current->children[letter];
+                }
+
+                if(current->isWord)
+                    return true;
+
+                return false;
+
+            }
+
+
+    };
+
+
 }
 
 
-void insert(string word, string suffixWord)
-{   
-
-	node *current = head;
-
-	for(int i = 0 ; i < word.length(); ++i)
-	{
-		char letter = word[i];	//extrct first character of word
-		if(current->child[letter] == NULL) {
-            current->child[letter] = new node();
-        }
-	
-		current = current->child[letter];		
-	}
-	current->isSuffix = true;
-    current->words.insert(suffixWord);
-}
-
-void generateAndInsert(string word) {
-    for(int i=0; i<word.length(); i++) {
-        insert(word.substr(i), word);
-    }
-}
-
-void dfs(node *n, vector<string> &wordList) {
-
-    if(n->isSuffix) {
-        wordList.insert(wordList.end(), n->words.begin(), n->words.end());
-    }
-
-    if(n->child.empty()) {
-        return;
-    }
-
-    
-    for(auto &[key, value]: n->child) {
-        dfs(value, wordList);
-    }
-
-    return;
-    
-}
-
-set<string> wordsWithSuffix(string suffix) {
-    node *current = head;
-
-    for(int i=0 ; i<suffix.length(); i++) {
-        char letter = suffix[i];
-        if(current->child[letter] == nullptr) {
-            return {};
-        }
-        current = current->child[letter];
-    } 
-
-    return current->words;
-}
-
-vector<string> wordsWithSubstring(string substring) {
-    node *current = head;
-
-    for(int i=0 ; i<substring.length(); i++) {
-        char letter = substring[i];
-        if(current->child[letter] == nullptr) {
-            return {};
-        }
-        current = current->child[letter];
-    } 
-
-    vector<string> wordsList;
-
-    dfs(current, wordsList);
-
-    return wordsList;
-}
-
-};
+#endif
