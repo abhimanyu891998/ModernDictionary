@@ -1,146 +1,99 @@
-#include<bits/stdc++.h>
-using namespace std;
+#include<fstream>
+#include<istream>
+#include<string>
+#include<memory>
+#include<chrono>
+#include<iostream>
+#include "./ModernDictionary/ModernDictionary.hpp"
+#include "./utils/utils.hpp"
 
 
-void preProcessText(string &s) {
-    s.erase(remove_if(s.begin(),s.end(), [&](char c) -> bool {
-        return (c == '-' || !isalpha(c));
-    }), s.end());
+void loadDictionary(const std::string &filePath, const std::unique_ptr<dictionary::ModernDictionary> &dict) {
 
-    transform(s.begin(), s.end(), s.begin(), [&](unsigned char c) -> char{
-        return tolower(c);
-    });
+    std::ifstream inputFileStream(filePath);
+    std::string word;
 
-    return;
-}
+    if(inputFileStream.is_open()) {
 
-struct node
-{
-	int prefix_count;
-	bool isEnd;
-	unordered_map<char, node*> child;
-    string word;
-}*head;
-
-void init()
-{
-	head = new node();
-	head->isEnd = false;
-	head->prefix_count = 0;
-    head->word = "";
-}
-
-void insert(string word)
-{   
-
-	node *current = head;
-	current->prefix_count++;
-	
-	for(int i = 0 ; i < word.length(); ++i)
-	{
-		char letter = word[i];	//extrct first character of word
-		if(current->child[letter] == NULL) {
-            current->child[letter] = new node();
+        while(std::getline(inputFileStream, word)) {
+            util::preProcessText(word);
+            dict->insertWord(word);
         }
-	
 
-		current->child[letter]->prefix_count++;
-		current = current->child[letter];		
-	}
-	current->isEnd = true;
-    current->word = word;
-}
-
-bool search(string word)
-{
-	node *current = head;
-	for(int i = 0 ; i < word.length(); ++i)
-	{
-		int letter = (int)word[i] - (int)'a';
-		if(current->child[letter] == NULL)
-			return false;		//not found
-		current = current->child[letter];
-	}
-	return current->isEnd;
-}
-
-int words_with_prefix(string prefix)
-{
-	node *current = head;
-	for(int i = 0; i < prefix.length() ; ++i)
-	{
-		char letter = prefix[i];
-		if(current->child[letter] == NULL)
-			return 0;
-		else
-			current = current->child[letter];
-	}
-	return current->prefix_count;
-}
-
-
-void dfs(node *n, vector<string> &wordList) {
-
-    if(n->isEnd) {
-        wordList.push_back(n->word);
+        dict->calculateAndCacheCounts();
+        inputFileStream.close();
     }
 
-    if(n->child.empty()) {
-        return;
+    else {
+        std::cout<<"Error opening the file. \n";
+    }
+}
+
+void loadandProcessOperations(const std::string &filePath, const std::unique_ptr<dictionary::ModernDictionary> &dict) {
+
+    std::ifstream inputFileStream(filePath);
+    std::string operation;
+    std::string argument;
+    std::string outputFilePath = "output.txt";
+
+    if(inputFileStream.is_open()) {
+
+        std::ofstream outputFileStream(outputFilePath);
+        
+        if(outputFileStream.is_open()) {
+
+            while(inputFileStream>>operation>>argument) {
+                std::string outputString = dict->processOperations(operation, argument);
+                outputString+= "\n";
+                outputFileStream<<outputString;
+            }
+
+            outputFileStream.close();
+        }
+
+        else {
+            std::cout<<"op file not open \n";
+        }
+
+        inputFileStream.close();
+
     }
 
-    
-    for(auto &[key, value]: n->child) {
-        dfs(value, wordList);
+    else {
+        std::cout<<"File not open\n";
     }
 
-    return;
-  
 }
 
 
-vector<string> words_list_prefix(string prefix) {
-    node *current = head;
-    for(int i=0; i<prefix.length() ; i++) {
-        char letter = prefix[i];
-        if(current->child[letter] == NULL)
-            return {};
-        else
-            current = current->child[letter];
+int main(int argc, char* argv[]) {
+
+    if(argc == 1) {
+        std::cout<<"Please pass the input file name and operations instructions file name. \n";
     }
 
-    vector<string> wordList;
-
-    dfs(current, wordList);
-
-    return wordList;
-  
-}
+    std::string inputFile = argv[1];
+    std::string operationsFile = argv[2];
 
 
-int main() {
+    inputFile = "./" + inputFile;
+    operationsFile = "./" + operationsFile;
 
-    init();
-    fstream f("./input.txt");
-    string s;
-    auto start = chrono::high_resolution_clock::now();
-    while(getline(f,s)) {
-        preProcessText(s);
-        insert(s);
-    }
-    auto stop = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::microseconds>(stop-start);
-    cout<<"duration "<<duration.count()<<endl;
+    std::unique_ptr<dictionary::ModernDictionary> dict = std::make_unique<dictionary::ModernDictionary>();
+    util::Timer timeCalculator;
 
-    s = "coat";
-    vector<string> words = words_list_prefix(s);
-    int numb = words_with_prefix(s);
-    cout<<numb<<endl;
-    for(auto &a: words) {
-        cout<<a<<" ";
-    }
+    timeCalculator.start();
+    loadDictionary(inputFile, dict);
+    int64_t timeTaken = timeCalculator.msPassed();
 
-    //cout<<search("france");
+    std::cout<<"Dictionary loaded and counts cached in: "<<timeTaken<<" milliseconds. \n";
+
+    timeCalculator.start();
+    loadandProcessOperations(operationsFile, dict);
+    timeTaken = timeCalculator.msPassed();
+
+    std::cout<<"Processed all operations in: "<<timeTaken<<" milliseconds. \n";
 
     return 0;
+
 }

@@ -2,14 +2,19 @@
 #define GST_UKKONENS_NODE
 #pragma once
 
-#include<bits/stdc++.h>
+#include<set>
+#include<algorithm>
+#include<memory>
+#include<vector>
+#include<string>
 #include "./Edge.hpp"
+
+namespace gst {
 
 struct Node {
 
     std::set<int> data;
     std::set<int> suffixData;
-    int lastIdx = 0;
     std::unordered_map<char, std::shared_ptr<Edge>> edges;
     std::shared_ptr<Node> suffix;
     int resultCount = -1;
@@ -21,13 +26,13 @@ struct Node {
         data = {};
     }
 
-    bool contains(int index) {
+    bool contains(const int &index) {
         return data.find(index)!=data.end();
     }
 
     std::vector<int> getData() { return getData(-1); }
 
-    std::vector<int> getData(int numElements) {
+    std::vector<int> getData(const int &numElements) {
         std::set<int> output;
         for(auto &num: data) {
             output.insert(num);
@@ -58,13 +63,13 @@ struct Node {
         return std::vector<int>(suffixData.begin(), suffixData.end());
     }
 
-    void addRef(int index) {
+    void addRef(const int &index) {
+
         if(contains(index)) {
             return;
         }
 
         data.insert(index);
-        lastIdx = index;
 
         std::shared_ptr<Node> iter = suffix;
         while(iter != nullptr) {
@@ -75,7 +80,7 @@ struct Node {
         }
     }
 
-    void addSuffix(int index) {
+    void addSuffix(const int &index) {
         if(suffixData.find(index) != suffixData.end()) {
             return;
         }
@@ -95,32 +100,35 @@ struct Node {
         return ret;
     }
 
-    void computeAndCacheSuffixCountRecursive() {
+    void calculateAndCacheSuffixCountRecursive() {
         this->suffixCount = this->suffixData.size();
         for(auto &[c,edge]: edges) {
-            edge->getDest()->computeAndCacheCountRecursive();
+            edge->getDest()->calculateAndCacheSuffixCountRecursive();
         }
     }
 
-    int computeAndCacheCount() {
+    int calculateAndCacheSubstringCount() {
         computeAndCacheCountRecursive();
         return resultCount;
     }
 
-    int computeAndCacheSuffixCount() {
-        computeAndCacheSuffixCountRecursive();
+    int calculateAndCacheSuffixCount() {
+        calculateAndCacheSuffixCountRecursive();
         return suffixCount;
     }
 
-    void addEdge(char ch, std::shared_ptr<Edge> e) {
+    void addEdge(const char &ch, std::shared_ptr<Edge> e) {
         edges[ch] = e;
     }
 
-    std::shared_ptr<Edge> getEdge(char ch) {
+    std::shared_ptr<Edge> getEdge(const char &ch) {
         return edges[ch];
     }
 
 };
+
+}
+
 
 
 #endif

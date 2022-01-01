@@ -1,4 +1,8 @@
-#include<bits/stdc++.h>
+#include<memory>
+#include<iostream>
+#include<vector>
+#include<string>
+
 #include "./GeneralisedSuffixTree.hpp"
 
 void preProcessText(std::string &s) {
@@ -14,18 +18,18 @@ void preProcessText(std::string &s) {
 }
 
 int main() {
-    std::unique_ptr<GeneralizedSuffixTree> in = std::make_unique<GeneralizedSuffixTree>();
+    std::unique_ptr<gst::GeneralizedSuffixTree> in = std::make_unique<gst::GeneralizedSuffixTree>();
     std::string word = "qabcz";
     int index = 0;
-    in->put(word, index);
+    in->insert(word, index);
     std::string word2 = "cdabc";
-    in->put(word2,1);
-    in->put("tabchij", 2);
+    in->insert(word2,1);
+    in->insert("tabchij", 2);
     std::string word3 = "fraabc";
-    in->put(word3, 3);
+    in->insert(word3, 3);
     std::string word4 = "abc";
-    in->put(word4, 4);
-    in->put(word4,5);
+    in->insert(word4, 4);
+    in->insert(word4,5);
     in->computeCount();
     in->computeSuffxCount();
 
@@ -37,7 +41,7 @@ int main() {
     }
 
     std::cout<<in->searchWithCount("abc")<<std::endl;
-    std::cout<<in->searchWithSuffixCount("abc")<<std::endl;
+    std::cout<<in->searchWithSuffixCount("cz")<<std::endl;
 
     // map<int,std::string> stringMap;
     // fstream f("../inputshit.txt");
@@ -47,7 +51,7 @@ int main() {
     // while(getline(f,s)) {
     //     preProcessText(s);
     //     stringMap[idx] = s;
-    //     in->put(s,idx);
+    //     in->insert(s,idx);
     //     idx++;
     // }
     // auto stop = chrono::high_resolution_clock::now();

@@ -5,6 +5,8 @@
 #include<memory>
 #include "./Node.hpp"
 
+namespace gst {
+    
 typedef struct Node Node;
 
 class Edge {
@@ -28,6 +30,9 @@ class Edge {
 
 
 };
+
+}
+
 
 #endif
 
