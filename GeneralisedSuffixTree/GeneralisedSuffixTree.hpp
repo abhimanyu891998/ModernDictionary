@@ -14,13 +14,44 @@
 
 namespace gst {
 
+/**
+ * An implementation of a generalized suffix tree based on Ukkonen's algorithm. The specifics of generalized
+ * algorithm were derived from Ukkonen's research paper titled "On-line construction of suffix trees", the paper
+ * can be found at http://www.cs.helsinki.fi/u/ukkonen/SuffixT1withFigs.pdf.
+ * 
+ * Helps in faster building of suffix tree O(n) time, as opposed to O(n^2) time taken by a normal approach. Here n is 
+ * the length of one word. This is a unique approach, unlike a conventional approach that concatenates multiple strings into one
+ * long string and then inserts into the tree based on Ukkonen's algorithm. That approach is not scalable for a large number of strings.
+ * This tree instead, is used to build an index over many strings and has an online property as well, which means you can insert strings to this
+ * tree even after the first initialization.
+ * 
+ * Main operations are insert words, search words with a given substring and search words with a given suffix.
+ * 
+ * The overall complexity of retrieval operation is O(m) where m is the length of query string to search within the tree.
+ * 
+ * In short, the tree has a set of nodes and labeled edges. The labels on these edges have a simple constraint, no two edges starting from the same node, can
+ * have the same character. Because of this, a (startNode, stringSuffix) pair can denote a unique path within the tree, this path can be 
+ * sequentially traversed using all the edges, starting from startNode such that e1.label + e2.label + e3.label .... is equal to the stringSuffix, here e1, e2, e3 are
+ * edges.
+ * 
+ * Essentially, the union of all edge labels from root to a leaf, represents set of strings contained within this tree. There are other strings, contained
+ * implicitly within the tree as well, as some string might be suffixes of a string, but also a substring for another longer string.
+ * 
+ * This implicit path is dealt with in the testAndSplit method and is implemented as described in the Ukkonen's paper.
+ */
 class GeneralizedSuffixTree {
 
     private:
 
     std::shared_ptr<Node> root = std::make_shared<Node>();
+    /**
+     * Last leaf added during an update operation.
+    */
     std::shared_ptr<Node> activeLeaf = root;
 
+    /**
+     * Returns the tree node (if present) that corresponds to a given string.
+     */
     std::shared_ptr<Node> searchNode(const std::string &word) {
         std::shared_ptr<Node> currentNode = root;
         std::shared_ptr<Edge> currentEdge = nullptr;
@@ -36,6 +67,7 @@ class GeneralizedSuffixTree {
                 size_t lenToMatch = std::min(word.length()-i, label.length());
 
                 if(word.substr(i, lenToMatch) != label.substr(0, lenToMatch)) {
+                    // the label on the edge does not correspond to the string we want to search.
                     return nullptr;
                 }
 
@@ -51,6 +83,13 @@ class GeneralizedSuffixTree {
         return nullptr;
     }
 
+    /**
+     * Starting from the inputNode, updates the tree by adding stringPart.
+     * 
+     * It returns a pair of node pointer and string, for the string that has been added so far.
+     * 
+     * params : inputNode : the node to start from , stringPart: the string to add to the tree, rest: the rest of the string, value: the index value of word in wordBuffer
+     */
     std::pair<std::shared_ptr<Node>, std::string> update(std::shared_ptr<Node> inputNode, std::string stringPart, std::string rest, int value) {
 
         std::shared_ptr<Node> s = inputNode;
@@ -69,9 +108,11 @@ class GeneralizedSuffixTree {
             std::shared_ptr<Edge> tempEdge = r->getEdge(newChar);
 
             if(tempEdge!=nullptr) {
-            leaf = tempEdge->getDest();
+                //Node already present. 
+                leaf = tempEdge->getDest();
             }
             else {
+                //We build a new leaf that originates from the given node. 
                 leaf = std::make_shared<Node>();
                 leaf->addRef(value);
                 leaf->addSuffix(value);
@@ -79,6 +120,7 @@ class GeneralizedSuffixTree {
                 r->addEdge(newChar, newEdge);
             }
 
+            // Updating the suffix link for newly created leaf
             if(activeLeaf!=root) {
                 activeLeaf->suffix = leaf;
             }
@@ -119,6 +161,13 @@ class GeneralizedSuffixTree {
         return {s, tempstr};
     }
 
+    /**
+     * Returns a pair of pointer to the node and the string, which is a farthest descendant of the input node that can be 
+     * reached by following a path of edges, this string will be a prefix of the inputstr and the remaining part
+     * will have to be appended to the concatenation of labels to get the final inputstr. 
+     * 
+     * This is required to the support the online property of this tree, as described in the paper.
+     */
     std::pair<std::shared_ptr<Node>, std::string> canonize(std::shared_ptr<Node> s, const std::string &inputstr) {
         if(inputstr=="") {
             return {s,inputstr};
@@ -141,6 +190,16 @@ class GeneralizedSuffixTree {
         return {};
     }
 
+    /**
+     * This is a crucial step to convert the implicit suffix tree, into a complete suffix tree.
+     * It tests whether the string stringPart + t is contained in the subtree that has inputs as root.
+     * If that is not true, but there is a path of edges such that 
+     * e1.label + e2.label + .... + endOfString = stringPart
+     * and there is also an edge g such that g.label = stringPart + rest. 
+     * Then this g edge needs to split into two edges, one having endOfString as label and the other having
+     * rest as label.
+     * 
+     */
     std::pair<bool, std::shared_ptr<Node>> testAndSplit(std::shared_ptr<Node> inputs, std::string stringPart, char t, std::string remainder, int value) {
 
         std::pair<std::shared_ptr<Node>, std::string> ret = canonize(inputs, stringPart);
@@ -207,20 +266,32 @@ class GeneralizedSuffixTree {
 
     public:
 
+    /**
+     * Searches for all the words that contain a given substring word
+     * Returns indices of those words in the wordBuffer contained in the dictionary.
+     */
     std::vector<int> search(const std::string &word) {
         return search(word, -1);
     }
 
+    /**
+     * Can return the words that contain a given substring word,
+     * takes in an additional param, results, this can be supplied if you
+     * want to limit the number of results that you want to receive.
+     */
     std::vector<int> search(std::string word, int results) {
-    std::shared_ptr<Node> tmpNode = searchNode(word);
-    
-    if(tmpNode == nullptr) {
-        return {};
+        std::shared_ptr<Node> tmpNode = searchNode(word);
+        
+        if(tmpNode == nullptr) {
+            return {};
+        }
+
+        return tmpNode->getData(results);
     }
 
-    return tmpNode->getData(results);
-    }
-
+    /**
+     * Searches for all the words that contain a given suffix.
+     */
     std::vector<int> searchSuffix(const std::string &word) {
 
         std::shared_ptr<Node> tmpNode = searchNode(word);
@@ -232,7 +303,9 @@ class GeneralizedSuffixTree {
         return tmpNode->getSuffixData();
     }
 
-
+    /**
+     * Returns the count of words represented by a given substring word
+     */
     int searchWithCount(std::string word) {
         std::shared_ptr<Node> tmpNode = searchNode(word);
         if(tmpNode == nullptr) {
@@ -242,6 +315,9 @@ class GeneralizedSuffixTree {
         return tmpNode->resultCount;
     }
 
+    /**
+     * Returns the count of words represented by a given suffix word
+     */
     int searchWithSuffixCount(std::string word) {
         std::shared_ptr<Node> tmpNode = searchNode(word);
         if(tmpNode == nullptr)
@@ -250,6 +326,10 @@ class GeneralizedSuffixTree {
         return tmpNode->suffixCount;
     }
 
+    /**
+     * Adds the specified index to the GST under the given key.
+     * Entries are inserted in a non-decreasing order.
+    */
     void insert(const std::string &key, const int &index) {
    
         activeLeaf = root;

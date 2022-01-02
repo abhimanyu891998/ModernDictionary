@@ -12,12 +12,19 @@
 #include "../utils/utils.hpp"
 
 namespace dictionary {
-    
+
+    /**
+     * A header only implementation of modernDictionary. 
+     * This dictionary can take in more than 100k words and supports operations
+     * such a getting the list of words containing a given prefix, suffix or a substring.
+     * It also can return counts for the same. Count operations are really fast and lightweight
+     * as they are cached when the dictionary is loaded into the program.
+    */
     class ModernDictionary {
 
         private:
 
-        std::vector<std::string> wordBuffer;
+        std::vector<std::string> wordBuffer; //Buffer to store words based on their indices.
         int lastWordIdx;
         std::unique_ptr<gst::GeneralizedSuffixTree> suffixTree;
         std::unique_ptr<prefixtree::Trie> trie;
@@ -43,6 +50,10 @@ namespace dictionary {
 
         }
 
+        /**
+         * To insert a new word into the dictionary.
+         * It adds the word to both prefix and suffix tree, if it is not already present.
+        */
         void insertWord(const std::string &word) {
             if(!trie->wordExists(word)) {
                 wordBuffer.push_back(word);
@@ -52,6 +63,10 @@ namespace dictionary {
             }
         }
 
+        /**
+         * Once all the words are inserted, this method can be called, 
+         * to cache the counts of suffixes and substrings.
+        */
         void calculateAndCacheCounts() {
             suffixTree->computeCount();
             suffixTree->computeSuffixCount();
@@ -59,7 +74,7 @@ namespace dictionary {
 
         std::string processOperations(const std::string &op, std::string &arg) {
 
-            util::preProcessText(arg);
+            util::preProcessText(arg); //Preprocess the argument to remove hyphens and make it only lowercase alphabet.
 
             switch(stringOpToEnum[op]) {
                 

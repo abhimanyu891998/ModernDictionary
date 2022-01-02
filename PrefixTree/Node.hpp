@@ -9,6 +9,14 @@
 
 namespace prefixtree {
 
+    /**
+     * Node for the prefix tree of all the strings.
+     * Contains information related to whether this node
+     * represents a word or not. If it does,
+     * what word is it. It also has edges originating
+     * from this node.
+     *
+     */
     struct Node {   
         int64_t prefixCount;
         bool isWord;

@@ -7,7 +7,9 @@
 #include "./ModernDictionary/ModernDictionary.hpp"
 #include "./utils/utils.hpp"
 
-
+/**
+ * Preprocesses the text and loads the dictionary.
+*/
 void loadDictionary(const std::string &filePath, const std::unique_ptr<dictionary::ModernDictionary> &dict) {
 
     std::ifstream inputFileStream(filePath);
@@ -25,10 +27,13 @@ void loadDictionary(const std::string &filePath, const std::unique_ptr<dictionar
     }
 
     else {
-        std::cout<<"Error opening the file. \n";
+        std::cout<<"Error opening the input words file. \n";
     }
 }
 
+/**
+ * Processes operations from the file and generates a output.txt file containing the results.
+*/
 void loadandProcessOperations(const std::string &filePath, const std::unique_ptr<dictionary::ModernDictionary> &dict) {
 
     std::ifstream inputFileStream(filePath);
@@ -65,7 +70,14 @@ void loadandProcessOperations(const std::string &filePath, const std::unique_ptr
 
 }
 
-
+/**
+ * Entry point of the program. 
+ * While running through command line, please specify the name of input file for words, and the input file for operations to execute.
+ * For instance, if main is the executable file, the do, {./main input.txt operations.txt}, here input.txt is the words file and operations.txt is the file
+ * containing the operations to be executed. 
+ * 
+ * The output of operations, will be generated in a separate output.txt file. 
+ */
 int main(int argc, char* argv[]) {
 
     if(argc == 1) {

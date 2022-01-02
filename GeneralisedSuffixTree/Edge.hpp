@@ -9,6 +9,10 @@ namespace gst {
     
 typedef struct Node Node;
 
+/**
+* Edge in the generalised suffix tree, the label corresponds to part of suffix this edge represents. 
+* The dest represents the destination node which is either a leaf or an intermediate node.
+*/
 class Edge {
     
     private:

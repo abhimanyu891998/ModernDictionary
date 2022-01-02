@@ -5,8 +5,15 @@
 #include<string>
 #include<chrono>
 
+/**
+ * Useful utility functions have been added here.
+ * 
+*/
 namespace util {
 
+/**
+ * Removes hyphens or anything this is not alphabets. Also converts everything to lower case.
+*/
 void preProcessText(std::string &s) {
 
     s.erase(remove_if(s.begin(),s.end(), [&](char c) -> bool {
@@ -20,6 +27,9 @@ void preProcessText(std::string &s) {
     return;
 }
 
+/**
+ * Convert a vector of string a single space separated string.
+*/
 std::string vecToString(const std::vector<std::string> &input) {
 
     std::string op = "";
@@ -44,6 +54,9 @@ std::string safeCutLastChar(std::string seq) {
     return seq.substr(0, seq.length()-1);
 }
 
+/**
+ * Timer to keep a track of time taken by operations.
+*/
 class Timer {
 private:
     std::chrono::time_point<std::chrono::steady_clock> startP;
